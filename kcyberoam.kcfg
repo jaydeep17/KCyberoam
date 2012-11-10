@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE kcfg SYSTEM "http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+<kcfg>
+        <kcfgfile name="kcyberoam"/>
+        <include>kglobalsettings.h</include>
+        <group name="general">
+                <entry name="alos" type="Bool">
+                        <label>Auto Login on Start</label>
+                        <default>false</default>
+                </entry>
+                <entry name="loe" type="Bool">
+                        <label>Logout on Exit</label>
+                        <default>true</default>
+                </entry>
+                <entry name="msts" type="Bool">
+                        <label>Minimize to System Tray on Start</label>
+                        <default>true</default>
+                </entry>
+        </group>
+        <group name="alternatives">
+
+        </group>
+</kcfg>

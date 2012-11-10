@@ -1,0 +1,4 @@
+File=kcyberoam.kcfg
+ClassName=KCyberoam
+Singleton=true
+Mutators=true

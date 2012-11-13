@@ -112,12 +112,14 @@ void MainWindow::readReply(QNetworkReply *rply)
             } else {
                 KMessageBox::error(this,"The system could not log you on.\nMake sure your password is correct.","Login failed");
             }
+            loginFailed();
         } else if(response.contains("Maximum",Qt::CaseInsensitive)){
             if(this->isMinimized()){
                 tray->showMessage("Login failed","You have reached Maximum Login Limit.","error");
             } else {
                 KMessageBox::error(this,"You have reached Maximum Login Limit.","Login failed");
             }
+            loginFailed();
         } else if(response.contains("You have successfully logged in")){
             emit loggedin();
         } else if(response.contains("You have successfully logged off")){
@@ -154,6 +156,8 @@ void MainWindow::login(bool timer)
         return;
     }
 
+    inUseID = ui->user_field->text();
+
     if(isLoggedin && !timer){
         QUrl credentials;
         credentials.addQueryItem("mode","193");
@@ -184,6 +188,7 @@ void MainWindow::declareLoggedIN()
         tray->showMessage("Notification" , ui->user_field->text() + " successfully logged in","info");
     }
     ui->login_b->setText("Logout");
+    log_in->setText(inUseID);
     isLoggedin = true;
     log_out->setEnabled(true);
     log_in->setEnabled(false);
@@ -198,6 +203,7 @@ void MainWindow::declareLoggedOFF()
         tray->showMessage("Notification", ui->user_field->text() + " successfully logged off", "info");
     }
     ui->login_b->setText("Login");
+    log_in->setText("Login");
     isLoggedin = false;
     log_out->setEnabled(false);
     log_in->setEnabled(true);
@@ -234,6 +240,35 @@ void MainWindow::createTrayMenu()
     trayMenu->addAction(log_in);
     trayMenu->addAction(log_out);
     tray->setContextMenu(trayMenu);
+}
+
+void MainWindow::loginFailed()
+{
+    QStringList usernames = grp.keyList();
+    if(failAttempts > grp.keyList().count()+1){
+        KMessageBox::information(this,"None of the A/Cs logged in successfully :(","Login Failure");
+        return;
+    }
+    int index = 0;
+    if(usernames.contains(inUseID)){
+        index = usernames.indexOf(inUseID);
+    }
+
+    //replace current id with an alternative
+    QString usr = ui->user_field->text();
+    QString pass = ui->pass_field->text();
+
+    QString altUser = usernames.at(index);
+    QString altPass = grp.readEntry(altUser);
+
+    grp.deleteEntry(altUser);
+    grp.writeEntry(usr,pass);
+
+    ui->user_field->setText(altUser);
+    ui->pass_field->setText(altPass);
+
+    failAttempts++;
+    login();
 }
 
 void MainWindow::showTrayMessage()

@@ -54,17 +54,19 @@ private:
     QNetworkRequest req;
     bool isLoggedin, wait4logout, supressMessage, gotReply;
 
-    //QSystemTrayIcon *tray;
     KStatusNotifierItem *tray;
     KMenu *trayMenu;
     KAction *log_in, *log_out, *quitAction, *showSettingsAction;
     GeneralSettings *gsettings;
     KConfigGroup grp;
+    QString inUseID;
 
+    int failAttempts;
     int timeInterval;
     QTimer tm, timeout;
     void createActions();
     void createTrayMenu();
+    void loginFailed();
 
 };
 

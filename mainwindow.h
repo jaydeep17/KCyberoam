@@ -11,6 +11,8 @@
 #include <QTimer>
 #include <QCloseEvent>
 #include <QEvent>
+#include <KConfig>
+#include <KConfigGroup>
 
 #include "kcyberoam.h"
 #include "generalsettings.h"
@@ -57,9 +59,9 @@ private:
     QMenu *trayMenu;
     KAction *shw, *log_in, *log_out, *quitAction, *showSettingsAction;
     GeneralSettings *gsettings;
+    KConfigGroup grp;
 
     int timeInterval;
-    //Dialog about_dialog;
     QTimer tm, timeout;
     void createActions();
     void createTrayMenu();

@@ -1,6 +1,7 @@
 #include <KApplication>
 #include <KAboutData>
 #include <KCmdLineArgs>
+#include <KConfig>
 #include "mainwindow.h"
 
 int main(int argc, char *argv[])

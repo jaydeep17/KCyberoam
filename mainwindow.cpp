@@ -2,11 +2,12 @@
 #include "ui_mainwindow.h"
 #include <QDebug>
 #include <QMessageBox>
-#include <QSettings>
 #include <KApplication>
 #include <KStandardAction>
 #include <KActionCollection>
 #include <KConfigDialog>
+
+#include <QDebug>
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -34,12 +35,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     isLoggedin = false;
 
-    QSettings setting("daiict","cyberoam_autoLogin");
-    QString uname = setting.value("uname","").toString();
-    if(uname != ""){
+    grp = KConfigGroup(KGlobal::config(),"credentials");
+    QString uname = grp.readEntry("uname","");
+
+    if(!uname.isEmpty()){
         ui->remember->setChecked(true);
         ui->user_field->setText(uname);
-        ui->pass_field->setText(setting.value("pass","").toString());
+        ui->pass_field->setText(grp.readEntry("pass",""));
     }
 
     tray = new QSystemTrayIcon(this);
@@ -130,13 +132,13 @@ void MainWindow::login(bool timer)
 {
     supressMessage = timer;
     if(ui->remember->isChecked()){
-        QSettings setting("daiict","cyberoam_autoLogin");
-        setting.setValue("uname",ui->user_field->text());
-        setting.setValue("pass",ui->pass_field->text());
-        setting.sync();
+        grp.writeEntry("uname",ui->user_field->text());
+        grp.writeEntry("pass",ui->pass_field->text());
+        grp.sync();
     } else {
-        QSettings setting("daiict","cyberoam_autoLogin");
-        setting.clear();
+        grp.writeEntry("uname","");
+        grp.writeEntry("pass","");
+        grp.sync();
     }
     if(traymode){
         if(ui->user_field->text() == "" || ui->pass_field->text() == ""){
@@ -281,6 +283,6 @@ void MainWindow::showSettings()
     }
     KConfigDialog *dialog = new KConfigDialog(this,"kcyberoam",KCyberoam::self());
     gsettings = new GeneralSettings(this);
-    dialog->addPage(gsettings,i18n("General Settings"),i18n("preferences-desktop"));
+    dialog->addPage(gsettings,i18n("General Settings"),"preferences-desktop");
     dialog->show();
 }

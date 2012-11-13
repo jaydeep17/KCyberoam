@@ -6,8 +6,9 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QSystemTrayIcon>
+#include <KStatusNotifierItem>
 #include <KAction>
-#include <QMenu>
+#include <KMenu>
 #include <QTimer>
 #include <QCloseEvent>
 #include <QEvent>
@@ -41,10 +42,8 @@ private slots:
     void login(bool timer= false);
     void declareLoggedIN();
     void declareLoggedOFF();
-    void showDialog();
     void showTrayMessage();
     void callLogin();
-    void iconActivated(QSystemTrayIcon::ActivationReason reason);
     void checkConnection();
     void showSettings();
 
@@ -53,11 +52,12 @@ private:
     QUrl cyberoamURL;
     QNetworkAccessManager *manager;
     QNetworkRequest req;
-    bool isLoggedin, traymode, wait4logout, supressMessage, gotReply;
+    bool isLoggedin, wait4logout, supressMessage, gotReply;
 
-    QSystemTrayIcon *tray;
-    QMenu *trayMenu;
-    KAction *shw, *log_in, *log_out, *quitAction, *showSettingsAction;
+    //QSystemTrayIcon *tray;
+    KStatusNotifierItem *tray;
+    KMenu *trayMenu;
+    KAction *log_in, *log_out, *quitAction, *showSettingsAction;
     GeneralSettings *gsettings;
     KConfigGroup grp;
 
@@ -65,6 +65,7 @@ private:
     QTimer tm, timeout;
     void createActions();
     void createTrayMenu();
+
 };
 
 #endif // MAINWINDOW_H

@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QDebug>
-#include <QMessageBox>
+#include <KMessageBox>
 #include <KApplication>
 #include <KStandardAction>
 #include <KActionCollection>
@@ -44,10 +44,11 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->pass_field->setText(grp.readEntry("pass",""));
     }
 
-    tray = new QSystemTrayIcon(this);
-    tray->setIcon(QIcon(":/cyb/icon.png"));
-    tray->setToolTip("Cyberoam AutoLogin Client");
-    traymode = wait4logout = supressMessage = gotReply = false;
+    tray = new KStatusNotifierItem(this);
+    tray->setStatus(KStatusNotifierItem::Active);
+    tray->setIconByPixmap(QIcon(":/cyb/icon.png"));
+    tray->setToolTip(QIcon(":/cyb/icon.png"), "Cyberoam AutoLogin Client", "");
+    wait4logout = supressMessage = gotReply = false;
 
     createActions();
     createTrayMenu();
@@ -61,6 +62,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&timeout,SIGNAL(timeout()),this,SLOT(checkConnection()));
 
     setupGUI(Default,"/home/jaydeep/projects/KCyberoam/debug/share/apps/kcyberoam/kcyberoamui.rc");
+
+    if(KCyberoam::msts())
+        this->setWindowState(Qt::WindowMinimized);
+
+    if(KCyberoam::alos())
+        login();
+
 }
 
 MainWindow::~MainWindow()
@@ -72,14 +80,8 @@ void MainWindow::changeEvent(QEvent *ev)
 {
     if(ev->type() == QEvent::WindowStateChange){
         if(this->windowState() & Qt::WindowMinimized){
-            tray->show();
-            traymode = true;
             QTimer::singleShot(250, this, SLOT(hide()));
             QTimer::singleShot(600,this,SLOT(showTrayMessage()));
-        }
-
-        if(this->windowState() && !Qt::WindowMinimized){
-            traymode = false;
         }
     }
     QMainWindow::changeEvent(ev);
@@ -87,7 +89,7 @@ void MainWindow::changeEvent(QEvent *ev)
 
 void MainWindow::closeEvent(QCloseEvent *ev)
 {
-    if(ev->type() == QEvent::Close){
+    if(KCyberoam::loe() && ev->type() == QEvent::Close){
         if(isLoggedin && gotReply){
             wait4logout = true;
             login(false);
@@ -105,15 +107,17 @@ void MainWindow::readReply(QNetworkReply *rply)
         QString response = QString::fromUtf8(rply->readAll());
         qDebug() << response;
         if(response.contains("Make sure your password is correct")){
-            if(traymode)
-                tray->showMessage("Login failed","The system could not log you on.\nMake sure your password is correct.",QSystemTrayIcon::Critical);
-            else
-                QMessageBox::critical(this,"Login failed","The system could not log you on.\nMake sure your password is correct.");
+            if(this->isMinimized()){
+                tray->showMessage("Login failed","The system could not log you on.\nMake sure your password is correct.","error");
+            } else {
+                KMessageBox::error(this,"The system could not log you on.\nMake sure your password is correct.","Login failed");
+            }
         } else if(response.contains("Maximum",Qt::CaseInsensitive)){
-            if(traymode)
-                tray->showMessage("Login failed","You have reached Maximum Login Limit.",QSystemTrayIcon::Critical);
-            else
-                QMessageBox::critical(this,"Login failed","You have reached Maximum Login Limit.");
+            if(this->isMinimized()){
+                tray->showMessage("Login failed","You have reached Maximum Login Limit.","error");
+            } else {
+                KMessageBox::error(this,"You have reached Maximum Login Limit.","Login failed");
+            }
         } else if(response.contains("You have successfully logged in")){
             emit loggedin();
         } else if(response.contains("You have successfully logged off")){
@@ -123,7 +127,7 @@ void MainWindow::readReply(QNetworkReply *rply)
         }
     } else {
         qDebug() << "error";
-        QMessageBox::critical(this,"Error Occured", rply->errorString());
+        KMessageBox::error(this, rply->errorString(),"Error Occured");
         isLoggedin = false;
     }
 }
@@ -140,14 +144,16 @@ void MainWindow::login(bool timer)
         grp.writeEntry("pass","");
         grp.sync();
     }
-    if(traymode){
-        if(ui->user_field->text() == "" || ui->pass_field->text() == ""){
+    if(ui->user_field->text() == "" || ui->pass_field->text() == ""){
+        if(this->isMinimized())
+            tray->showMessage("Cannot Login","Incomplete credentials provided","error");
+        else{
             this->show();
-            tray->showMessage("Cannot Login","Incomplete credentials provided");
-            showDialog();
-            return;
+            KMessageBox::error(this,"Incomplete credentials provided","Cannot Login");
         }
+        return;
     }
+
     if(isLoggedin && !timer){
         QUrl credentials;
         credentials.addQueryItem("mode","193");
@@ -174,8 +180,8 @@ void MainWindow::login(bool timer)
 
 void MainWindow::declareLoggedIN()
 {
-    if(traymode && !supressMessage){
-        tray->showMessage("Notification" , ui->user_field->text() + " successfully logged in");
+    if(this->isMinimized() && !supressMessage){
+        tray->showMessage("Notification" , ui->user_field->text() + " successfully logged in","info");
     }
     ui->login_b->setText("Logout");
     isLoggedin = true;
@@ -188,8 +194,8 @@ void MainWindow::declareLoggedIN()
 
 void MainWindow::declareLoggedOFF()
 {
-    if(traymode){
-        tray->showMessage("Notification", ui->user_field->text() + " successfully logged off");
+    if(this->isMinimized()){
+        tray->showMessage("Notification", ui->user_field->text() + " successfully logged off", "info");
     }
     ui->login_b->setText("Login");
     isLoggedin = false;
@@ -202,15 +208,11 @@ void MainWindow::declareLoggedOFF()
 
 void MainWindow::createActions()
 {
-    shw = new KAction("Show",this);
-    connect(shw,SIGNAL(triggered()),this,SLOT(showDialog()));
-
-    log_in = new KAction("Login",this);
+    log_in = new KAction(KIcon("preferences-system-login"), "Login",this);
     connect(log_in,SIGNAL(triggered()),this,SLOT(login()));
     actionCollection()->addAction("login",log_in);
 
-
-    log_out = new KAction("Logout",this);
+    log_out = new KAction(KIcon("gnome-log-out"),"Logout",this);
     log_out->setEnabled(false);
     connect(log_out,SIGNAL(triggered()),this,SLOT(login()));
     actionCollection()->addAction("logout",log_out);
@@ -227,27 +229,17 @@ void MainWindow::createActions()
 
 void MainWindow::createTrayMenu()
 {
-    trayMenu = new QMenu(this);
-    trayMenu->addAction(shw);
+    trayMenu = new KMenu("KCyberoam",this);
+    trayMenu->addTitle(QIcon(":/cyb/icon.png"),"KCyberoam");
     trayMenu->addAction(log_in);
     trayMenu->addAction(log_out);
-    trayMenu->addSeparator();
-    //trayMenu->addAction(about);
-    //trayMenu->addAction(quit);
     tray->setContextMenu(trayMenu);
-    connect(tray,SIGNAL(activated(QSystemTrayIcon::ActivationReason)),this,SLOT(iconActivated(QSystemTrayIcon::ActivationReason)));
-}
-
-void MainWindow::showDialog()
-{
-    this->showNormal();
-    this->activateWindow();
-    traymode = false;
 }
 
 void MainWindow::showTrayMessage()
 {
-    tray->showMessage("Notification","I'm alive :), sitting here..");
+    if(KCyberoam::snom())
+        tray->showMessage("Notification","I'm alive :), sitting here..","info");
 }
 
 void MainWindow::callLogin()
@@ -255,20 +247,13 @@ void MainWindow::callLogin()
     login(true);
 }
 
-void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
-{
-    if(reason == QSystemTrayIcon::DoubleClick){
-        this->showDialog();
-    }
-}
-
 void MainWindow::checkConnection()
 {
     if(!gotReply){
-        if(traymode){
-            tray->showMessage("Connection Error","Cyberoam didn't respond to the request",QSystemTrayIcon::Critical);
+        if(this->isMinimized()){
+            tray->showMessage("Connection Error","Cyberoam didn't respond to the request","error");
         } else {
-            QMessageBox::critical(this,"Connection Error","Cyberoam didn't respond to the request");
+            KMessageBox::error(this,"Cyberoam didn't respond to the request","Connection Error");
         }
         isLoggedin = false;
     }

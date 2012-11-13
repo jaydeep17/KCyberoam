@@ -16,6 +16,10 @@
                         <label>Minimize to System Tray on Start</label>
                         <default>true</default>
                 </entry>
+		<entry name="snom" type="Bool">
+                        <label>Show Notification on Minimize</label>
+                        <default>true</default>
+                </entry>
         </group>
         <group name="alternatives">
 
